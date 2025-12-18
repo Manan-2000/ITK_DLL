@@ -1,0 +1,27 @@
+#include<tc/tc_startup.h>
+#include<tccore/custom.h>
+#include<epm/epm.h>
+#include<tccore/grm.h>
+#include<bom/bom.h>
+#include<bom/bomlines.h>
+#include<bom/bom_attr.h>
+#include<tc/emh.h>
+#include<ae/dataset.h>
+#include<fstream>
+#include<base_utils/ScopedSmPtr.hxx>
+#include<tccore/aom.h>
+#include<tccore/aom_prop.h>
+#include<fclasses/tc_string.h>
+using namespace std;
+using namespace Teamcenter;
+
+extern "C"{
+	_declspec(dllexport) int ITK_DLL_register_callbacks();
+}
+
+int CUSTOM_EXIT(int* n, va_list list);
+EPM_decision_t check_target_count(EPM_rule_message_t msg);
+EPM_decision_t check_rel_and_PDF(EPM_rule_message_t msg);
+EPM_decision_t check_IR_and_child_PDF(EPM_rule_message_t msg);
+EPM_decision_t Check_PDF(tag_t rev);
+
