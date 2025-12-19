@@ -18,6 +18,12 @@
     <ClCompile Include="Source.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="BOM.cxx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="check_PDF.cxx">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Header.hxx">

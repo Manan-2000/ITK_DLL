@@ -1,84 +1,8 @@
 #include"Header.hxx"
 #define err1 919002
 #define err2 919003
-#define err3 919004
-
 
 fstream fobj;
-
-EPM_decision_t Check_PDF(tag_t topline) {
-	int status = ITK_ok;
-	EPM_decision_t decision = EPM_nogo;
-	tag_t pdf_type = NULLTAG;
-	status = TCTYPE_find_type("PDF", "Dataset", &pdf_type);
-	scoped_smptr<char>value;
-	status = AOM_ask_value_string(topline, "Item ID", &value);
-	tag_t qry = NULLTAG;
-	status = QRY_find2("Item ID", &qry);
-
-
-	char** entries = (char**)MEM_alloc(sizeof(char**));
-	entries[0] = (char*)MEM_alloc(sizeof(char*) * tc_strlen("Item ID"));
-	tc_strcpy(entries[0], "Item ID");
-
-	char** values = (char**)MEM_alloc(sizeof(char**));
-	values[0] = (char*)MEM_alloc(sizeof(char*) * tc_strlen(value.get()));
-	tc_strcpy(values[0], value.get());
-
-	int nfind = 0;
-	scoped_smptr<tag_t>results;
-
-	status = QRY_execute(qry, 1, entries, values, &nfind, &results);
-
-	if (entries[0]) {
-		MEM_free(entries[0]);
-	}
-	if (entries) {
-		MEM_free(entries);
-	}
-	if (values[0]) {
-		MEM_free(values[0]);
-	}
-	if (values) {
-		MEM_free(values);
-	}
-
-	tag_t rev = NULLTAG;
-	status = ITEM_ask_latest_rev(results[0], &rev);
-	
-	int count = 0;
-	scoped_smptr<tag_t>secondary_objects,types;
-	status = GRM_list_secondary_objects_only(rev, NULLTAG, &count, &secondary_objects);
-	status = TCTYPE_ask_object_types(count, secondary_objects.get(),&types);
-	for (int i = 0; i < count; i++) {
-		if (types[i] == pdf_type) {
-			decision = EPM_go;
-			break;
-		}
-	}
-	return decision;
-}
-
-EPM_decision_t BOM(tag_t rev) {
-	int status = ITK_ok;
-	EPM_decision_t decision = EPM_nogo;
-	tag_t window = NULLTAG, topline = NULLTAG;
-	status = BOM_create_window(&window);
-	status = BOM_set_window_top_line(window, NULLTAG, rev, NULLTAG, &topline);
-
-	int count = 0;
-	scoped_smptr<tag_t> child;
-	status = BOM_line_ask_child_lines(topline, &count, &child);
-	decision = Check_PDF(topline);
-	for (int i = 0; i < count; i++) {
-		if (decision == EPM_go) {
-			break;
-		}
-		BOM(child[i]);
-		
-	}
-	return decision;
-}
 
 int ITK_DLL_register_callbacks() {
 	int status = ITK_ok;
@@ -94,7 +18,8 @@ int CUSTOM_EXIT (int* n, va_list list) {
 	fobj << "\n\nDLL EXIT CALL REGISTERED, LOGIN SUCCESS";
 	//status = EPM_register_rule_handler("Check-target-count", "Check Target Count",(EPM_rule_handler_t)check_target_count);
 	//status = EPM_register_rule_handler("Check-release-&-PDF-dataset", "Check release & PDF dataset", (EPM_rule_handler_t)check_rel_and_PDF);
-	status = EPM_register_rule_handler("IR-and-one-child-should-have-PDF", "IR-and-one-child-should-have-PDF", (EPM_rule_handler_t)check_IR_and_child_PDF);
+	//status = EPM_register_rule_handler("IR-and-all-child-should-have-PDF", "IR-and-all-child-should-have-PDF", (EPM_rule_handler_t)check_IR_and_child_PDF);
+	status = EPM_register_rule_handler("Validate-Dataset-Named-Reference", "Check to see if the Dataset contain a Named Reference", (EPM_rule_handler_t)check_named_ref);
 
 	return status;
 }
@@ -182,7 +107,7 @@ EPM_decision_t check_rel_and_PDF(EPM_rule_message_t msg) {
 
 EPM_decision_t check_IR_and_child_PDF(EPM_rule_message_t msg) {
 
-	EPM_decision_t decision = EPM_nogo;
+	EPM_decision_t decision = EPM_go;
 	int status = ITK_ok;
 
 	tag_t root_task = NULLTAG;
@@ -193,11 +118,60 @@ EPM_decision_t check_IR_and_child_PDF(EPM_rule_message_t msg) {
 	status = EPM_ask_attachments(root_task, EPM_target_attachment, &count, &attachments);
 
 	for (int i = 0; i < count; i++) {
-		decision = BOM(attachments[i]);
+		status = BOM(attachments[i]);
+		if (status != ITK_ok) {
+			decision = EPM_nogo;
+			break;
+		}
 	}
-	scoped_smptr<char>err_text;
-	EMH_ask_error_text(err1,&err_text);
-	status = EMH_store_error_s1(EMH_severity_error, err1, err_text.get());
+	if (decision == EPM_nogo) {
+		scoped_smptr<char>err_text;
+		EMH_ask_error_text(err1, &err_text);
+		status = EMH_store_error_s1(EMH_severity_error, err1, err_text.get());
+	}
+	return decision;
+}
+
+EPM_decision_t check_named_ref(EPM_rule_message_t msg) {
+
+	EPM_decision_t decision = EPM_go;
+	int status = ITK_ok;
+
+	tag_t root_task = NULLTAG;
+	status = EPM_ask_root_task(msg.task, &root_task);
+
+	int count = 0;
+	scoped_smptr<tag_t> attachments;
+	status = EPM_ask_attachments(root_task, EPM_target_attachment, &count, &attachments);
+	int dataset_count = 0;
+	int total_name_ref = 0;
+	for (int i = 0; i < count; i++) {
+		int sec_count = 0;
+		scoped_smptr<tag_t>secondary_objects;
+		status = GRM_list_secondary_objects_only(attachments[i], NULLTAG, &sec_count,&secondary_objects);
+		dataset_count += sec_count-1;
+		int name_ref_count = 0;
+		for (int j = 0; j < sec_count; j++) {
+			int nFound = 0;
+			scoped_smptr<tag_t>refObject;
+			AE_ask_dataset_named_refs(secondary_objects[j], &nFound, &refObject);
+			if (nFound != 0) {
+				name_ref_count++;
+			}
+		}
+		total_name_ref += name_ref_count;
+
+	}
+	if (dataset_count == 0) {
+		decision = EPM_nogo;
+	}
+
+	if (dataset_count != total_name_ref) {
+		decision = EPM_nogo;
+		scoped_smptr<char>err_text;
+		EMH_ask_error_text(err2, &err_text);
+		status = EMH_store_error_s1(EMH_severity_error, err2, err_text.get());
+	}
 
 	return decision;
 }

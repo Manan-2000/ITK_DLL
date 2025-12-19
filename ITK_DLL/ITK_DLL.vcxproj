@@ -126,6 +126,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BOM.cxx" />
+    <ClCompile Include="check_PDF.cxx" />
     <ClCompile Include="Source.cxx" />
   </ItemGroup>
   <ItemGroup>
