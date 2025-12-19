@@ -24,9 +24,14 @@ EPM_decision_t check_target_count(EPM_rule_message_t msg);
 EPM_decision_t check_rel_and_PDF(EPM_rule_message_t msg);
 EPM_decision_t check_IR_and_child_PDF(EPM_rule_message_t msg);
 EPM_decision_t check_named_ref(EPM_rule_message_t msg);
+int set_reviewer(EPM_action_message_t msg);
+int del_pdf(EPM_action_message_t msg);
+
+
 
 int Check_PDF(tag_t rev);
 int BOM_get_child(tag_t topline);
 int BOM(tag_t rev);
+
 
 

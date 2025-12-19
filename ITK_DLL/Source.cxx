@@ -19,7 +19,9 @@ int CUSTOM_EXIT (int* n, va_list list) {
 	//status = EPM_register_rule_handler("Check-target-count", "Check Target Count",(EPM_rule_handler_t)check_target_count);
 	//status = EPM_register_rule_handler("Check-release-&-PDF-dataset", "Check release & PDF dataset", (EPM_rule_handler_t)check_rel_and_PDF);
 	//status = EPM_register_rule_handler("IR-and-all-child-should-have-PDF", "IR-and-all-child-should-have-PDF", (EPM_rule_handler_t)check_IR_and_child_PDF);
-	status = EPM_register_rule_handler("Validate-Dataset-Named-Reference", "Check to see if the Dataset contain a Named Reference", (EPM_rule_handler_t)check_named_ref);
+	//status = EPM_register_rule_handler("Validate-Dataset-Named-Reference", "Check to see if the Dataset contain a Named Reference", (EPM_rule_handler_t)check_named_ref);
+	//status = EPM_register_action_handler("Assign-Reviewer", "Assign Reviewer based on Item ID", (EPM_action_handler_t)set_reviewer);
+	status = EPM_register_action_handler("Delete-PDF", "Delete PDF assigned to attachment", (EPM_action_handler_t)del_pdf);
 
 	return status;
 }
@@ -175,3 +177,66 @@ EPM_decision_t check_named_ref(EPM_rule_message_t msg) {
 
 	return decision;
 }
+
+int set_reviewer(EPM_action_message_t msg) {
+	int status = ITK_ok;
+
+	tag_t root_task = NULLTAG;
+	status = EPM_ask_root_task(msg.task, &root_task);
+
+	int count = 0;
+	scoped_smptr<tag_t>attachments;
+	status = EPM_ask_attachments(root_task, EPM_target_attachment, &count, &attachments);
+
+	for (int i = 0; i < count; i++) {
+		
+		scoped_smptr<char>value;
+		status = AOM_ask_value_string(attachments[i], "item_id", &value);
+
+		if (strstr(value.get(), "IN")) {
+			status = EPM_set_task_result(msg.task, "IN");
+		}
+
+		else if (strstr(value.get(), "US")) {
+			status = EPM_set_task_result(msg.task, "US");
+		}
+		else {
+			status = EPM_set_task_result(msg.task, "Global");
+		}
+	}
+
+	return status;
+}
+
+int del_pdf(EPM_action_message_t msg) {
+	int status = ITK_ok;
+	
+	tag_t root_task = NULLTAG;
+	status = EPM_ask_root_task(msg.task, &root_task);
+
+	int count = 0;
+	scoped_smptr<tag_t>attachments;
+	status = EPM_ask_attachments(root_task, EPM_target_attachment, &count, &attachments);
+
+	
+	for (int i = 0; i < count; i++) {
+		int sec_count = 0;
+		scoped_smptr<tag_t>secondary_list;
+		status = GRM_list_secondary_objects_only(attachments[i], NULLTAG, &sec_count, &secondary_list);
+		if (sec_count > 1) {
+			for (int j = 0; j < sec_count; j++) {
+				scoped_smptr<char>obj_type;
+				status = WSOM_ask_object_type2(secondary_list[j], &obj_type);
+
+				if (tc_strcmp(obj_type.get(), "PDF") == 0) {
+					tag_t relation = NULLTAG;
+					status = GRM_find_relation(attachments[i], secondary_list[j], NULLTAG, &relation);
+					status = GRM_delete_relation(relation);
+				}
+			}
+		}
+	}
+
+	return status;
+}
+	
