@@ -15,6 +15,9 @@
 using namespace std;
 using namespace Teamcenter;
 
+#define ERROR_Handling if(status != ITK_ok) {scoped_smptr<char> text;  EMH_ask_error_text(status,&text);fstream fobj; fobj.open("C:\\Users\\FaithPLM\\Desktop\\Test files\\Errors.txt",ios::app); fobj<<text.get()<<endl; fobj.close();}
+
+
 extern "C"{
 	_declspec(dllexport) int ITK_DLL_register_callbacks();
 }

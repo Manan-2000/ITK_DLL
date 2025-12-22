@@ -2,6 +2,7 @@
 #define err1 919002
 #define err2 919003
 
+
 fstream fobj;
 
 int ITK_DLL_register_callbacks() {
@@ -218,24 +219,46 @@ int del_pdf(EPM_action_message_t msg) {
 	scoped_smptr<tag_t>attachments;
 	status = EPM_ask_attachments(root_task, EPM_target_attachment, &count, &attachments);
 
+	int rel_count = 0;
+	scoped_smptr<tag_t>relation_type_list;
+	GRM_list_relation_types(&rel_count, &relation_type_list);
+	int exit = 0;
 	
 	for (int i = 0; i < count; i++) {
+
 		int sec_count = 0;
-		scoped_smptr<tag_t>secondary_list;
+		scoped_smptr<tag_t> secondary_list;
 		status = GRM_list_secondary_objects_only(attachments[i], NULLTAG, &sec_count, &secondary_list);
+
 		if (sec_count > 1) {
 			for (int j = 0; j < sec_count; j++) {
 				scoped_smptr<char>obj_type;
 				status = WSOM_ask_object_type2(secondary_list[j], &obj_type);
 
 				if (tc_strcmp(obj_type.get(), "PDF") == 0) {
-					tag_t relation = NULLTAG;
-					status = GRM_find_relation(attachments[i], secondary_list[j], NULLTAG, &relation);
-					status = GRM_delete_relation(relation);
+					for (int k = 0; k < rel_count; k++) {
+						tag_t relation = NULLTAG;
+						status = GRM_find_relation(attachments[i], secondary_list[j], relation_type_list[k], &relation);
+						ERROR_Handling;
+						if (relation != NULLTAG) {
+							status = GRM_delete_relation(relation);
+							ERROR_Handling;
+							exit++;
+							break;
+						}
+					}
+				}
+				if (exit > 0) {
+					break;
 				}
 			}
 		}
+		if (exit > 0) {
+			break;
+		}
+
 	}
+
 
 	return status;
 }
