@@ -22,10 +22,29 @@ int CUSTOM_EXIT (int* n, va_list list) {
 	//status = EPM_register_rule_handler("IR-and-all-child-should-have-PDF", "IR-and-all-child-should-have-PDF", (EPM_rule_handler_t)check_IR_and_child_PDF);
 	//status = EPM_register_rule_handler("Validate-Dataset-Named-Reference", "Check to see if the Dataset contain a Named Reference", (EPM_rule_handler_t)check_named_ref);
 	//status = EPM_register_action_handler("Assign-Reviewer", "Assign Reviewer based on Item ID", (EPM_action_handler_t)set_reviewer);
-	status = EPM_register_action_handler("Delete-PDF", "Delete PDF assigned to attachment", (EPM_action_handler_t)del_pdf);
+	//status = EPM_register_action_handler("Delete-PDF", "Delete PDF assigned to attachment", (EPM_action_handler_t)del_pdf);
+	
+	
+	METHOD_id_t method_id;
+	//status = METHOD_find_method("ItemRevision", TC_delete_msg,&method_id);
+	//if (method_id.id == 0) {
+	//	fobj << "Method is not registered for specified Message/Type" << endl;
+	//	fobj.close();
+	//	return 0;
+	//}
+	//status = METHOD_add_action(method_id, METHOD_pre_action_type,(METHOD_function_t)dataset_backup,NULL);
+
+	status = METHOD_find_method("ItemRevision", AE_create_dataset_msg, &method_id);
+	if (method_id.id == 0) {
+		fobj << "Method is not registered for specified Message/Type" << endl;
+		fobj.close();
+		return 0;
+	}
+	status = METHOD_add_action(method_id, METHOD_post_action_type, (METHOD_function_t)dataset_release, NULL);
 
 	return status;
 }
+
 
 EPM_decision_t check_target_count(EPM_rule_message_t msg) {
 
@@ -263,3 +282,43 @@ int del_pdf(EPM_action_message_t msg) {
 	return status;
 }
 	
+int dataset_backup(METHOD_message_t* msg, va_list list) {
+	int status = ITK_ok;
+	tag_t rev = va_arg(list, tag_t);
+	int count = 0;
+	scoped_smptr<tag_t>sec_obj;
+	status = GRM_list_secondary_objects_only(rev, NULLTAG, &count, &sec_obj);
+	for (int i = 0; i < count; i++) {
+		scoped_smptr<char>obj_type;
+		status = WSOM_ask_object_type2(sec_obj[i], &obj_type);
+		if (tc_strcmp(obj_type.get(), "PDF") == 0) {
+			scoped_smptr<char>value;
+			status = AOM_ask_value_string(sec_obj[i], "object_name", &value);
+			string name = string(value.get()) + ".pdf";
+
+			tag_t new_dataset = NULLTAG;
+			status = AE_copy_dataset_with_id(sec_obj[i], name.c_str(), name.c_str(), name.c_str(), &new_dataset);
+			tag_t curr_grp_mem = NULLTAG;
+			status = SA_ask_current_groupmember(&curr_grp_mem);
+			tag_t user_tag = NULLTAG;
+			status = SA_ask_groupmember_user(curr_grp_mem, &user_tag);
+			tag_t newfolder = NULLTAG;
+			status = SA_ask_user_newstuff_folder(user_tag, &newfolder);
+
+			status = FL_insert(newfolder, new_dataset, 999);
+
+			status = AOM_save_without_extensions(newfolder);
+
+		}
+	}
+	return status;
+}
+
+int dataset_release(METHOD_message_t* msg, va_list list) {
+	int status = ITK_ok;
+
+	tag_t dataset = va_arg(list, tag_t);
+
+
+	return status;
+}

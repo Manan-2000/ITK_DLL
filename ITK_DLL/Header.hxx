@@ -12,6 +12,10 @@
 #include<tccore/aom.h>
 #include<tccore/aom_prop.h>
 #include<fclasses/tc_string.h>
+#include<tccore/tc_msg.h>
+#include<sa/group.h>
+#include<tc/folder.h>
+#include<ae/dataset_msg.h>
 using namespace std;
 using namespace Teamcenter;
 
@@ -29,6 +33,8 @@ EPM_decision_t check_IR_and_child_PDF(EPM_rule_message_t msg);
 EPM_decision_t check_named_ref(EPM_rule_message_t msg);
 int set_reviewer(EPM_action_message_t msg);
 int del_pdf(EPM_action_message_t msg);
+int dataset_backup(METHOD_message_t* msg, va_list list);
+
 
 
 
