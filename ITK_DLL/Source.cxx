@@ -34,7 +34,7 @@ int CUSTOM_EXIT (int* n, va_list list) {
 	//}
 	//status = METHOD_add_action(method_id, METHOD_pre_action_type,(METHOD_function_t)dataset_backup,NULL);
 
-	status = METHOD_find_method("ItemRevision", AE_create_dataset_msg, &method_id);
+	status = METHOD_find_method("PDF", AE_create_dataset_msg, &method_id);
 	if (method_id.id == 0) {
 		fobj << "Method is not registered for specified Message/Type" << endl;
 		fobj.close();
@@ -317,8 +317,68 @@ int dataset_backup(METHOD_message_t* msg, va_list list) {
 int dataset_release(METHOD_message_t* msg, va_list list) {
 	int status = ITK_ok;
 
-	tag_t dataset = va_arg(list, tag_t);
+	tag_t  datasetTypeTag = va_arg(list, tag_t);
+	const char* datasetName = va_arg(list, char*);
+	const char* datasetDescription = va_arg(list, char*);
+	const char* datasetID = va_arg(list, char*);
+	const char* datasetRevision = va_arg(list, char*);
+	tag_t newDataset = va_arg(list, tag_t);
+	
+	scoped_smptr<char>obj_type;
+	status = AOM_ask_value_string(newDataset,"object_type", &obj_type);
+	if (tc_strcmp(obj_type.get(), "PDF") == 0) {
+		int primary_count = 0;
+		scoped_smptr<tag_t>primary_objects;
+		status = GRM_list_primary_objects_only(newDataset, NULLTAG, &primary_count, &primary_objects);
+		ERROR_Handling;
+		int count = 0;
+		tag_t relation_type = NULLTAG;
+		status = GRM_find_relation_type("IMAN_manifestation", &relation_type);
+		tag_t relation = NULLTAG;
+		status = GRM_find_relation(primary_objects[0], newDataset, relation_type, &relation);
+		ERROR_Handling;
+		if (relation != NULLTAG) {
+			scoped_smptr<char>value;
+			status = AOM_ask_value_string(primary_objects[0], "release_status_list", &value);
+			tag_t release_status;
+			status = EPM_find_status_type(value.get(), &release_status);
+			
+			tag_t* dataset2 = (tag_t*)MEM_alloc(sizeof(tag_t));
+            dataset2[0] = newDataset;
+            status = RELSTAT_add_release_status(release_status, 1, dataset2, TRUE);
+            MEM_free(dataset2);
+        }
+    }
 
-
-	return status;
+    return status;
 }
+
+//int dataset_release(METHOD_message_t* msg, va_list list) {
+//	int status = ITK_ok;
+//	tag_t  primary_object = va_arg(list, tag_t);
+//	tag_t  secondary_object = va_arg(list, tag_t);
+//	tag_t  relation_type = va_arg(list, tag_t);
+//	
+//	scoped_smptr<char> primary_type;
+//	scoped_smptr<char> secondary_type;
+//	status = AOM_ask_value_string(primary_object, "object_type", &primary_type);
+//	status = AOM_ask_value_string(secondary_object, "object_type", &secondary_type);
+//	tag_t manifestation = NULLTAG;
+//	status = GRM_find_relation_type("IMAN_manifestation", &manifestation);
+//
+//	if (tc_strcmp(secondary_type.get(), "PDF") == 0 and (relation_type == manifestation)) {
+//		scoped_smptr<char> value;
+//		status = AOM_ask_value_string(primary_object, "release_status_list", &value);
+//
+//		tag_t status = NULLTAG;
+//		status = EPM_find_status_type(value.get(), &status);
+//
+//		tag_t* secondary = (tag_t*)MEM_alloc(sizeof(tag_t*));
+//		secondary[0] = secondary_object;
+//		status = RELSTAT_add_release_status(status, 1, secondary, TRUE);
+//
+//		MEM_free(secondary);
+//	}
+//
+//	return status;
+//}

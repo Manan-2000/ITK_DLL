@@ -16,6 +16,7 @@
 #include<sa/group.h>
 #include<tc/folder.h>
 #include<ae/dataset_msg.h>
+#include<tccore/grm_msg.h>
 using namespace std;
 using namespace Teamcenter;
 
@@ -34,7 +35,7 @@ EPM_decision_t check_named_ref(EPM_rule_message_t msg);
 int set_reviewer(EPM_action_message_t msg);
 int del_pdf(EPM_action_message_t msg);
 int dataset_backup(METHOD_message_t* msg, va_list list);
-
+int dataset_release(METHOD_message_t* msg, va_list list);
 
 
 
