@@ -44,6 +44,7 @@ int CUSTOM_EXIT (int* n, va_list list) {
 
 	//status = EPM_register_action_handler("Generate-report-for-target-objects", "Generate report for target objects", (EPM_action_handler_t)report_gen);
 
+	fobj.close();
 	return status;
 }
 
