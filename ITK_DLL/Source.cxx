@@ -34,7 +34,7 @@ int CUSTOM_EXIT (int* n, va_list list) {
 	//}
 	//status = METHOD_add_action(method_id, METHOD_pre_action_type,(METHOD_function_t)dataset_backup,NULL);
 
-	status = METHOD_find_method("PDF", AE_create_dataset_msg, &method_id);
+	status = METHOD_find_method("Dataset", AE_create_dataset_msg, &method_id);
 	if (method_id.id == 0) {
 		fobj << "Method is not registered for specified Message/Type" << endl;
 		fobj.close();
@@ -379,6 +379,41 @@ int dataset_release(METHOD_message_t* msg, va_list list) {
 //
 //		MEM_free(secondary);
 //	}
+//
+//	return status;
+//}
+
+//int dataset_release(METHOD_message_t* msg, va_list list) {
+//	int status = ITK_ok;
+//	tag_t dataset = va_arg(list, tag_t);
+//
+//	scoped_smptr<char>obj_type;
+//	status = WSOM_ask_object_type2(dataset, &obj_type);
+//	if (tc_strcmp(obj_type.get(), "PDF") == 0) {
+//		tag_t relation_type = NULLTAG;
+//		status = GRM_find_relation_type("IMAN_manifestation", &relation_type);
+//		int count = 0;
+//		scoped_smptr<tag_t>primary_objects;
+//		status = GRM_list_primary_objects_only(dataset, relation_type, &count, &primary_objects);
+//		for (int i = 0; i < count; i++) {
+//			scoped_smptr<char>primary_type;
+//			status = WSOM_ask_object_type2(primary_objects[i], &primary_type);
+//				if (tc_strcmp(primary_type.get(), "ItemRevision") == 0) {
+//					scoped_smptr<char>value;
+//					status = AOM_ask_value_string(primary_objects[i], "release_status_list", &value);
+//					tag_t release_status;
+//					status = EPM_find_status_type(value.get(), &release_status);
+//
+//					tag_t* dataset2 = (tag_t*)MEM_alloc(sizeof(tag_t));
+//					dataset2[0] = dataset;
+//					status = RELSTAT_add_release_status(release_status, 1, dataset2, TRUE);
+//					MEM_free(dataset2);
+//
+//			}
+//		}
+//	}
+//
+//
 //
 //	return status;
 //}
