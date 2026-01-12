@@ -396,7 +396,8 @@ int dataset_release(METHOD_message_t* msg, va_list list) {
 //		status = GRM_find_relation_type("IMAN_manifestation", &relation_type);
 //		int count = 0;
 //		scoped_smptr<tag_t>primary_objects;
-//		status = GRM_list_primary_objects_only(dataset, relation_type, &count, &primary_objects);
+//
+//		status = GRM_list_all_related_objects_only(dataset, &count, &primary_objects);
 //		for (int i = 0; i < count; i++) {
 //			scoped_smptr<char>primary_type;
 //			status = WSOM_ask_object_type2(primary_objects[i], &primary_type);
