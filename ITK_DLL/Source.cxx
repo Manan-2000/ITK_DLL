@@ -34,13 +34,15 @@ int CUSTOM_EXIT (int* n, va_list list) {
 	//}
 	//status = METHOD_add_action(method_id, METHOD_pre_action_type,(METHOD_function_t)dataset_backup,NULL);
 
-	status = METHOD_find_method("Dataset", AE_create_dataset_msg, &method_id);
-	if (method_id.id == 0) {
-		fobj << "Method is not registered for specified Message/Type" << endl;
-		fobj.close();
-		return 0;
-	}
-	status = METHOD_add_action(method_id, METHOD_post_action_type, (METHOD_function_t)dataset_release, NULL);
+	//status = METHOD_find_method("Dataset", AE_create_dataset_msg, &method_id);
+	//if (method_id.id == 0) {
+	//	fobj << "Method is not registered for specified Message/Type" << endl;
+	//	fobj.close();
+	//	return 0;
+	//}
+	//status = METHOD_add_action(method_id, METHOD_post_action_type, (METHOD_function_t)dataset_release, NULL);
+
+	//status = EPM_register_action_handler("Generate-report-for-target-objects", "Generate report for target objects", (EPM_action_handler_t)report_gen);
 
 	return status;
 }
@@ -417,3 +419,51 @@ int dataset_release(METHOD_message_t* msg, va_list list) {
 //
 //	return status;
 //}
+
+int report_gen(EPM_action_message_t msg) {
+	int status = ITK_ok;
+	fstream report;
+	report.open("C:\\Users\\FaithPLM\\Desktop\\Test files\\rev_report.csv", ios::out);
+	report << "Item ID" << "," << "Item Name" << "," << "Owning User" << "," << "Release Status" << endl;
+
+	tag_t root_task = NULLTAG;
+	status = EPM_ask_root_task(msg.task, &root_task);
+
+	scoped_smptr<tag_t>attachments;
+	int count = 0;
+	status = EPM_ask_attachments(root_task, EPM_target_attachment, &count, &attachments);
+
+	tag_t rev = NULLTAG;
+	for (int i = 0; i < count; i++) {
+		scoped_smptr<char> type;
+		status = AOM_ask_value_string(attachments[i], "object_type", &type);
+		if (tc_strcmp(type.get(), "ItemRevision") == 0) {
+			rev = attachments[i];
+			
+			scoped_smptr<char>name;
+			status = AOM_ask_value_string(rev, "object_name", &name);
+			scoped_smptr<char>ID;
+			status = AOM_ask_value_string(rev, "item_id", &ID);
+			scoped_smptr<char>rev_id;
+			status = AOM_ask_value_string(rev, "item_revision_id", &rev_id);
+			int is_released = 0;
+			status = EPM_ask_if_released(rev, &is_released);
+
+			string str;
+			if (is_released == 1) {
+				str = "Released";
+			}
+			else {
+				str = "Not Released";
+			}
+
+			report << ID.get() << "," << name.get() << "," << rev_id.get() << "," << str << endl;
+
+		}
+	}
+
+	report.close();
+
+
+	return status;
+}

@@ -36,6 +36,7 @@ int set_reviewer(EPM_action_message_t msg);
 int del_pdf(EPM_action_message_t msg);
 int dataset_backup(METHOD_message_t* msg, va_list list);
 int dataset_release(METHOD_message_t* msg, va_list list);
+int report_gen(EPM_action_message_t msg);
 
 
 
