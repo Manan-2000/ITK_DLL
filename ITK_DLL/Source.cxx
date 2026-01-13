@@ -25,7 +25,7 @@ int CUSTOM_EXIT (int* n, va_list list) {
 	//status = EPM_register_action_handler("Delete-PDF", "Delete PDF assigned to attachment", (EPM_action_handler_t)del_pdf);
 	
 	
-	METHOD_id_t method_id;
+	//METHOD_id_t method_id;
 	//status = METHOD_find_method("ItemRevision", TC_delete_msg,&method_id);
 	//if (method_id.id == 0) {
 	//	fobj << "Method is not registered for specified Message/Type" << endl;
@@ -34,15 +34,16 @@ int CUSTOM_EXIT (int* n, va_list list) {
 	//}
 	//status = METHOD_add_action(method_id, METHOD_pre_action_type,(METHOD_function_t)dataset_backup,NULL);
 
-	status = METHOD_find_method("Dataset", AE_create_dataset_msg, &method_id);
-	if (method_id.id == 0) {
-		fobj << "Method is not registered for specified Message/Type" << endl;
-		fobj.close();
-		return 0;
-	}
-	status = METHOD_add_action(method_id, METHOD_post_action_type, (METHOD_function_t)dataset_release, NULL);
+	//status = METHOD_find_method("Dataset", AE_create_dataset_msg, &method_id);
+	//if (method_id.id == 0) {
+	//	fobj << "Method is not registered for specified Message/Type" << endl;
+	//	fobj.close();
+	//	return 0;
+	//}
+	//status = METHOD_add_action(method_id, METHOD_post_action_type, (METHOD_function_t)dataset_release, NULL);
 
 	//status = EPM_register_action_handler("Generate-report-for-target-objects", "Generate report for target objects", (EPM_action_handler_t)report_gen);
+	status = EPM_register_rule_handler("Check-previous-IR-in-process", "Check whether the previous Iten Revision is in process", (EPM_rule_handler_t)check_IR);
 
 	fobj.close();
 	return status;
@@ -468,4 +469,46 @@ int report_gen(EPM_action_message_t msg) {
 
 
 	return status;
+}
+
+EPM_decision_t check_IR(EPM_rule_message_t msg) {
+	EPM_decision_t decision = EPM_nogo;
+	int status = ITK_ok;
+
+	tag_t root_task = NULLTAG;
+	status = EPM_ask_root_task(msg.task, &root_task);
+
+	scoped_smptr<tag_t>attachments;
+	int count = 0;
+	status = EPM_ask_attachments(root_task, EPM_target_attachment, &count, &attachments);
+
+	for (int i = 0; i < count; i++) {
+		scoped_smptr<char>value;
+		status = AOM_ask_value_string(attachments[i], "object_type", &value);
+		if (tc_strcmp(value.get(),"ItemRevision")==0){
+			tag_t rev = attachments[i];
+			scoped_smptr<char>item_id;
+			status = AOM_ask_value_string(rev, "item_id", &item_id);
+			scoped_smptr<char>rev_id;
+			status = AOM_ask_value_string(rev, "item_revision_id", &rev_id);
+			if (tc_strcmp(rev_id.get(), "A") != 0) {
+				char id = rev_id.get()[0];
+				char prev_id = (int)(id)-1;
+				char* new_id = &prev_id;
+				tag_t rev_tag;
+				status = ITEM_find_rev(item_id.get(), new_id, &rev_tag);
+				int released = 0;
+				status = EPM_ask_if_released(rev_tag, &released);
+				if (released == 1) {
+					decision = EPM_go;
+					break;
+				}
+				else {
+					break;
+				}
+			}
+		}
+	}
+
+	return decision;
 }

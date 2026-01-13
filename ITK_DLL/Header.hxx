@@ -35,9 +35,9 @@ EPM_decision_t check_named_ref(EPM_rule_message_t msg);
 int set_reviewer(EPM_action_message_t msg);
 int del_pdf(EPM_action_message_t msg);
 int dataset_backup(METHOD_message_t* msg, va_list list);
-int dataset_release(METHOD_message_t* msg, va_list list);
+//int dataset_release(METHOD_message_t* msg, va_list list);
 int report_gen(EPM_action_message_t msg);
-
+EPM_decision_t check_IR(EPM_rule_message_t msg);
 
 
 int Check_PDF(tag_t rev);
